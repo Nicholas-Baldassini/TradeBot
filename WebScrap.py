@@ -32,6 +32,12 @@ time.sleep(2.5)
 driver.find_element_by_id("header-toolbar-study-templates").click()
 time.sleep(1)
 driver.find_element_by_class_name("titleItem-2noQNU_F").click()
+driver.find_element_by_id("header-toolbar-intervals").click()
+
+# for e in driver.find_elements_by_class_name("item-2IihgTnv"):
+#     print(e.text)
+time.sleep(0.5)
+driver.find_elements_by_class_name("item-2IihgTnv")[7].click()
 
 def get_emas():
     while True:
@@ -50,7 +56,7 @@ def get_emas():
 
 
 
-time.sleep(2)
+time.sleep(5)
 get_emas()
 
 

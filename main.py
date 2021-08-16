@@ -1,56 +1,89 @@
-from selenium import webdriver
-from selenium.webdriver.common.action_chains import ActionChains
 import time
 import threading
 
-symbol = input("Input symbol: ")
-url = "https://www.tradingview.com/symbols/" + symbol
-
-# BTCCAD = "https://www.tradingview.com/symbols/BTCCAD/?exchange=CAPITALCOM"
-# BTCUSD = "https://www.tradingview.com/symbols/BTCUSD"
-# url = "https://www.tradingview.com"
-PATH = "/Users/baldo/Applications/chromedriver"
-driver = webdriver.Chrome(PATH)
-driver.get(url)
-action = ActionChains(driver)
-
-driver.set_window_position(0, 0)
-driver.set_window_size(500, 500)
 
 precision = 0.5
 # In milliseconds
 
+ema_low = []
+ema_high = []
 
-def symbol_price():
-    while True:
-        price = driver.find_element_by_class_name("tv-symbol-price-quote__value")
-        print(symbol, " price: ", price.text)
-        time.sleep(precision)
+
+
+
+def value_func(buy: float, sell: float, amount: float):
+    """
+    Calculates net change on `amount` based on the buying price and selling
+    price
+
+    Amount is in Canadian$
+
+    >>> value_func(43560, 45360, 5000)
+        5206.61157
+    >>> value_func(100, 200, 50)
+        100
+    """
+    coin_amount = buy / amount
+    # Amount of coins you own in that currency (BTC, ETH, LTC...)
+
+    closing_amount = coin_amount * sell
+    # Amount of your own currency you own based off the closing amount and
+    # amount of coin_amount you own (CAD, USD, EUR...)
+
+    return closing_amount
+
+
+# def symbol_price():
+#     while True:
+#         price = driver.find_element_by_class_name("tv-symbol-price-quote__value")
+#         print(symbol, " price: ", price.text)
+#         time.sleep(precision)
 
 
 price_thread = threading.Thread(target=symbol_price)
 price_thread.start()
 
-technical_tab = driver.find_element_by_link_text("Technicals")
-technical_tab.click()
 
-oscillators = {"Relative Strength Index": None,
-               "Stochastic": None,
-               "Commodity Channel Index": None,
-               "Average Directional Index": None,
-               "Awesome Oscillator": None, "Momentum": None,
-               "MACD Level": None, "Stochastic RSI Fast": None,
-               "Williams Percent Range": None,
-               "Bull Bear Power": None, "Ultimate Oscillator": None}
 
-average_keys = [10, 20, 30, 50, 100, 200]
-moving_averages = {"Ichmoku Cloud Base Line": None,
-                   "Volume Weighted Moving Average": None,
-                   "Hull Moving Average": None}
+def update_ema(lower: list, higher: list):
+    """
+    Scrape and store ema information, should be threaded
+    """
+    lower_ema = None
+    higher_ema = None
+    # Information scraped ^
 
-for key in average_keys:
-    moving_averages["Exp_avg" + str(key)] = None
-    moving_averages["Simple_avg" + str(key)] = None
+    outlier_constant = 10
+
+    if len(lower) > outlier_constant:
+        lower.pop(0)
+        lower.append(lower_ema)
+        higher.pop(0)
+        higher.append(higher_ema)
+
+
+def buy_sell_signals(lower: list, higher: list):
+    """
+    Computes buy sell signals
+    """
+    safety = 90
+    # safety is the percent of emas that follow the trend
+    pass
+
+
+def buy_sell_action(signal: bool, amount):
+    """
+    Make a purchase based on the buy_sell_signals function
+
+    True: BUY
+    False: SELL
+
+    Possible to include a spectrum of buying/selling: Only sell 50% of current
+    amount because of unpredictability instead of the whole amount...
+    """
+    pass
+    # Make the necessary selenium action calls on fee free website for trading
+
 
 time.sleep(100)
 driver.quit()
