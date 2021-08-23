@@ -1,9 +1,7 @@
 from selenium import webdriver
-import Email
 import time
 
 url = "https://www.tradingview.com/#signin"
-chart_url = "https://www.tradingview.com/chart"
 password = "AgainWithTheMaestro123"
 email = "bottrader00002@gmail.com"
 
@@ -60,12 +58,18 @@ driver.find_elements_by_class_name("item-2IihgTnv")[time_interval].click()
 time.sleep(0.5)
 
 
+def get_time() -> str:
+    t = time.localtime()
+    return time.strftime("%H:%M:%S", t)
+
 
 def get_EMA(wait=False, length=2):
     """
     If wait=True, the ema is taken over a time of length to give a more accurate reading and get rid of
     instantaneous spikes that may throw off the count
     """
+
+    # FIX THE SCRAPE DATA, if indicators change than the ema wont be scraped correctly, because of indices
     if wait:
         ema_3 = float(driver.find_elements_by_class_name("valueValue-2KhwsEwE")[-1].text)
         ema_9 = float(driver.find_elements_by_class_name("valueValue-2KhwsEwE")[-2].text)
@@ -75,13 +79,36 @@ def get_EMA(wait=False, length=2):
 
         return ((ema_3 - ema_9) + (ema2_3 - ema2_9))/2
     else:
-        ema_3 = float(driver.find_elements_by_class_name("valueValue-2KhwsEwE")[-1].text)
-        ema_9 = float(driver.find_elements_by_class_name("valueValue-2KhwsEwE")[-2].text)
+        ema_3 = float(driver.find_elements_by_class_name("valueValue-2KhwsEwE")[9].text)
+        ema_9 = float(driver.find_elements_by_class_name("valueValue-2KhwsEwE")[8].text)
     return ema_3 - ema_9
 
 
+def get_MACD():
+    macd = driver.find_element_by_xpath("/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[3]/td[2]/div/div[1]/div/div[2]/div[2]/div[2]/div/div[1]")
+    # [bar number, line #1, line #2]
+    return float(macd.text.replace(chr(8722), '-'))
 
-def find_possible_coins():
+
+def click_on_watchlist(coin: str) -> bool:
+    """
+    Click on the desired coin on the watchlist to bring up its chart
+    """
+    for e in driver.find_elements_by_class_name("wrap-1a1_EyKG"):
+        if e.text.split("\n")[0] == coin:
+            e.click()
+            print("Clicked on ", coin)
+            time.sleep(2)
+            return True
+    print(f"Could not find {coin} to click in watchlist")
+    return False
+
+
+def get_price():
+    return float(driver.find_element_by_class_name("highlight-2GhssDiZ").text)
+
+
+def find_possible_coins() -> list:
     """
     This functions finds all the coins that are currently falling, we only want
     to be looking at coins that are currently falling so then the moment that
@@ -91,6 +118,7 @@ def find_possible_coins():
     """
     print("Searching for negative EMA's...")
     print("===============================")
+    time.sleep(2)
     negative_EMAS = []
     for e in driver.find_elements_by_class_name("wrap-1a1_EyKG"):
         try:
@@ -99,9 +127,8 @@ def find_possible_coins():
             e.click()
             time.sleep(3)
             print(e.text.split("\n")[0], get_EMA())
-            if get_EMA() < 0.05:
-                # 0.5 SHOULD BE A RATIO TO EACH COIN NOT A HARD CODED 0.5
-                # ----------------------------------------------------
+            if get_EMA() < 0.005:
+                # If this happens, then the EMA3 < EMA9 -> downtrend
                 print("Negative EMA: ", e.text.split("\n")[0])
                 negative_EMAS.append(e.text.split("\n")[0])
         except:
@@ -112,7 +139,7 @@ def find_possible_coins():
     return negative_EMAS
 
 
-def look_for_changing_EMAS():
+def look_for_changing_EMAS() -> list:
     """
     This function searches through the negative EMA coins and checks if their
     new EMA value has just become positive, if it does this implies a climb about
@@ -142,33 +169,29 @@ def look_for_changing_EMAS():
     print("===============================")
     return light_side
 
-def get_MACD():
-    macd = driver.find_element_by_xpath("/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[3]/td[2]/div/div[1]/div/div[2]/div[2]/div[2]/div/div[1]")
-    # [bar number, line #1, line #2]
-    return float(macd.text.replace(chr(8722), '-'))
+
+# def find_coins_to_buy():
+#     holding = []
+#     # Currently only the first coin to be spotted to hold will be held, any
+#     # other coins that are a good buy will be discarded
+#     while True:
+#         print("Looking for possible purchases....")
+#         t = time.localtime()
+#         local_time = time.strftime("%H:%M:%S", t)
+#         print("Time: ", local_time)
+#         coins = look_for_changing_EMAS()
+#         if coins:
+#             print("Found a possible coin: ", holding)
+#             holding.extend(coins)
+#
+#             holding.clear()
+#         else:
+#             print("No purchases found.")
 
 
-def find_coins_to_buy():
-    holding = []
-    # Currently only the first coint to be spotted to hold will be held, any
-    # other coins that are a good buy will be discarded
-    while True:
-        print("Looking for possible purchases....")
-        t = time.localtime()
-        local_time = time.strftime("%H:%M:%S", t)
-        print("Time: ", local_time)
-        coins = look_for_changing_EMAS()
-        if coins:
-            print("Found a possible coin: ", holding)
-            holding.extend(coins)
-
-            holding.clear()
-        else:
-            print("No purchases found.")
-
-def MACD_test_buy():
+def MACD_test_buy() -> bool:
     """
-    Get time from the website, every time a new minute happens gather MACD information and determine buy/sell
+    Get time from the website, ever interval, update MACD information and determine buy/sell
     """
     macd_time_interval = 3 * 60
     macd_length = 3
@@ -196,17 +219,14 @@ def MACD_test_buy():
             raise Exception
 
     return True
-    # If we reach this point, there has been a successful increasing MACD
+    # If we reach this point, there has been a successful increasing MACD and we purchase
 
 
-def MACD_hold_sell(stop_loss=5):
+def MACD_hold_sell(n=3, stop_loss=5):
     """
     From here, we bought the coin already, we now analyze the MACD for n consistent negative MACD's to indidicate a
     sell signal or a stop_loss, either sell the coin if the coin dips below the stop_loss or n negative MACD's
     """
 
-time.sleep(2)
-
-
-time.sleep(100)
-driver.quit()
+# time.sleep(5 * 60)
+# driver.quit()
