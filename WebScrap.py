@@ -52,7 +52,7 @@ driver.find_element_by_id("header-toolbar-intervals").click()
 """
 index_to_seconds = [60, 180, 5 * 60, 15 * 60, 30 * 60, 45 * 60, 60 * 60, 120 * 60, 180 * 60]
 # index from the above comment corresponds the amount in seconds ^^^
-time_interval = 1
+time_interval = 0
 time.sleep(0.5)
 driver.find_elements_by_class_name("item-2IihgTnv")[time_interval].click()
 time.sleep(0.5)
@@ -170,30 +170,11 @@ def look_for_changing_EMAS() -> list:
     return light_side
 
 
-# def find_coins_to_buy():
-#     holding = []
-#     # Currently only the first coin to be spotted to hold will be held, any
-#     # other coins that are a good buy will be discarded
-#     while True:
-#         print("Looking for possible purchases....")
-#         t = time.localtime()
-#         local_time = time.strftime("%H:%M:%S", t)
-#         print("Time: ", local_time)
-#         coins = look_for_changing_EMAS()
-#         if coins:
-#             print("Found a possible coin: ", holding)
-#             holding.extend(coins)
-#
-#             holding.clear()
-#         else:
-#             print("No purchases found.")
-
-
 def MACD_test_buy() -> bool:
     """
-    Get time from the website, ever interval, update MACD information and determine buy/sell
+    Get time from the website, every interval, update MACD information and determine buy/sell
     """
-    macd_time_interval = 3 * 60
+    macd_time_interval = index_to_seconds[time_interval]
     macd_length = 3
     macd = get_MACD()
     # The macd the moment we find a positive ema
@@ -222,11 +203,64 @@ def MACD_test_buy() -> bool:
     # If we reach this point, there has been a successful increasing MACD and we purchase
 
 
-def MACD_hold_sell(n=3, stop_loss=5):
+def MACD_hold_and_sell(stoploss=0.001, n=4):
     """
     From here, we bought the coin already, we now analyze the MACD for n consistent negative MACD's to indidicate a
     sell signal or a stop_loss, either sell the coin if the coin dips below the stop_loss or n negative MACD's
+
+    Will either sell if stop loss or n decreasing MACD's in a row
+
+    This function will run for as long as we should hold, send email after function call is over
     """
+
+    # TODO Test implementing stop loss on multithreading approach to update on smaller interval than the MACD
+
+    sell_point = (1 - stoploss) * get_price()
+    print(f"Initial sell point: {sell_point}")
+
+    macd_time_interval = index_to_seconds[time_interval]  # 4 minutes
+    # macd_time_interval = 60
+    prev_macd = get_MACD()
+    prev_price = get_price()
+    decreasing_macds = 0
+
+    while decreasing_macds < n or get_price() <= sell_point:
+        time.sleep(macd_time_interval)
+        next_macd = get_MACD()
+        next_price = get_price()
+        if next_macd < 0:
+            print("Sell the fucking stock its tanking")
+            break
+        elif next_macd < prev_macd:
+            decreasing_macds += 1
+            print("Decreased MACD: ", prev_macd, next_macd)
+        elif next_macd > prev_macd:
+            decreasing_macds = 0
+            print("Increased MACD: ", prev_macd, next_macd, sep=" ")
+
+        if next_price > prev_price:
+            sell_point = (1 - stoploss) * get_price()
+            print("Stop loss increased: ", sell_point)
+
+        prev_price = next_price
+        prev_macd = next_macd
+    print("Sell conditions met", f"n = {decreasing_macds}", f"Sell Point: {sell_point}", f"Price: {get_price()}", sep="\n")
+
+
+import Email
+m = f"""\t
+                Buy: BTC
+                Price: 6999
+                Time: 9:00
+                """
+Email.send_email(Email.boom, " Buy")
+Email.send_email(Email.boom, m.replace("Buy: ", "Sell: "))
+
+
+
+
+
+
 
 # time.sleep(5 * 60)
 # driver.quit()
