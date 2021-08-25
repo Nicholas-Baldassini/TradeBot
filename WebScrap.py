@@ -1,12 +1,15 @@
 from selenium import webdriver
 import time
+import InformationExtract as IE
+
 
 url = "https://www.tradingview.com/#signin"
-password = "AgainWithTheMaestro123"
-email = "bottrader00002@gmail.com"
+password = IE.Email_Password[0]
+email = IE.Email_Sender[0]
 
-MAC_PATH = "/Users/baldo/Applications/chromedriver"
-WIN_PATH = "C:\Program Files (x86)\CHROMEWEBDRIVER\chromedriver"
+MAC_PATH = IE.Driver_Path[1]
+WIN_PATH = IE.Driver_Path[0]
+
 driver = webdriver.Chrome(WIN_PATH)
 driver.get(url)
 driver.set_page_load_timeout(5)
@@ -52,7 +55,7 @@ driver.find_element_by_id("header-toolbar-intervals").click()
 """
 index_to_seconds = [60, 180, 5 * 60, 15 * 60, 30 * 60, 45 * 60, 60 * 60, 120 * 60, 180 * 60]
 # index from the above comment corresponds the amount in seconds ^^^
-time_interval = 0
+time_interval = 2
 time.sleep(0.5)
 driver.find_elements_by_class_name("item-2IihgTnv")[time_interval].click()
 time.sleep(0.5)
@@ -127,7 +130,7 @@ def find_possible_coins() -> list:
             e.click()
             time.sleep(3)
             print(e.text.split("\n")[0], get_EMA())
-            if get_EMA() < 0.005:
+            if get_EMA() < 0:
                 # If this happens, then the EMA3 < EMA9 -> downtrend
                 print("Negative EMA: ", e.text.split("\n")[0])
                 negative_EMAS.append(e.text.split("\n")[0])
@@ -224,7 +227,7 @@ def MACD_hold_and_sell(stoploss=0.001, n=4):
     prev_price = get_price()
     decreasing_macds = 0
 
-    while decreasing_macds < n or get_price() <= sell_point:
+    while decreasing_macds < n and get_price() >= sell_point:
         time.sleep(macd_time_interval)
         next_macd = get_MACD()
         next_price = get_price()
@@ -245,22 +248,6 @@ def MACD_hold_and_sell(stoploss=0.001, n=4):
         prev_price = next_price
         prev_macd = next_macd
     print("Sell conditions met", f"n = {decreasing_macds}", f"Sell Point: {sell_point}", f"Price: {get_price()}", sep="\n")
-
-
-import Email
-m = f"""\t
-                Buy: BTC
-                Price: 6999
-                Time: 9:00
-                """
-Email.send_email(Email.boom, " Buy")
-Email.send_email(Email.boom, m.replace("Buy: ", "Sell: "))
-
-
-
-
-
-
 
 # time.sleep(5 * 60)
 # driver.quit()

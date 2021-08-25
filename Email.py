@@ -1,29 +1,26 @@
 import smtplib, ssl
-
+import InformationExtract as IE
 port = 465  # For SSL
-password = "AgainWithTheMaestro123"
-email = "bottrader00002@gmail.com"
-smtp_server = "smtp.gmail.com"
 
-boom = "6479962879@fido.ca"
-john = "6473823566@msg.telus.com"
-Anthony = "6474662879@fido.ca"
-Selena = "6478844347@msg.telus.com"
+password = IE.Email_Password[0]
+email = IE.Email_Sender[0]
+boom = IE.Email_Destination[0]
+john = IE.Email_Destination[1]
+jp = IE.Email_Destination[2]
+
+smtp_server = "smtp.gmail.com"
 
 # Create a secure SSL context
 context = ssl.create_default_context()
-
-message = """
-\t
-8-----
-"""
+message = "\tThis is a test! Snap me if you received this message, the bot is pretty much ready -boom"
 
 
-def send_email(target: str, text: str):
+def send_email(targets: list, text: str):
     with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
         server.login(email, password)
-        server.sendmail(email, target, text)
+        for target in targets:
+            server.sendmail(email, target, text)
 
 
 if __name__ == "__main__":
-    send_email(Selena, message)
+    send_email([boom], message)
