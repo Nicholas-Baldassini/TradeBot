@@ -1,4 +1,6 @@
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 import time
 import InformationExtract as IE
 
@@ -24,21 +26,18 @@ driver.find_element_by_name("password").send_keys(password)
 driver.find_element_by_class_name("tv-button__loader").click()
 time.sleep(2.5)
 
-# Clicks the top sorted coin, change index to view other coins
-# Starts at 2
-index = 2
-driver.find_element_by_xpath(f"/html/body/div[1]/div/div[1]/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[2]/div/div[{index}]").click()
-time.sleep(1.5)
-driver.find_element_by_class_name("tv-goto-chart-button").click()
-time.sleep(1)
-driver.switch_to.window(driver.window_handles[-1])
-time.sleep(2.5)
 
-# Enable indicator template for EMA's
-driver.find_element_by_id("header-toolbar-study-templates").click()
-time.sleep(1)
-driver.find_element_by_class_name("titleItem-2noQNU_F").click()
-driver.find_element_by_id("header-toolbar-intervals").click()
+# time.sleep(1.5)
+# driver.find_element_by_class_name("tv-goto-chart-button").click()
+# time.sleep(1)
+# driver.switch_to.window(driver.window_handles[-1])
+# time.sleep(2.5)
+
+# # Enable indicator template for EMA's
+# driver.find_element_by_id("header-toolbar-study-templates").click()
+# time.sleep(1)
+# driver.find_element_by_class_name("titleItem-2noQNU_F").click()
+# driver.find_element_by_id("header-toolbar-intervals").click()
 
 
 """
@@ -53,17 +52,21 @@ driver.find_element_by_id("header-toolbar-intervals").click()
 8 = 3 hour
 9 = 4 hour
 """
-index_to_seconds = [60, 180, 5 * 60, 15 * 60, 30 * 60, 45 * 60, 60 * 60, 120 * 60, 180 * 60]
-# index from the above comment corresponds the amount in seconds ^^^
-time_interval = 2
-time.sleep(0.5)
-driver.find_elements_by_class_name("item-2IihgTnv")[time_interval].click()
-time.sleep(0.5)
+# index_to_seconds = [60, 180, 5 * 60, 15 * 60, 30 * 60, 45 * 60, 60 * 60, 120 * 60, 180 * 60]
+# # index from the above comment corresponds the amount in seconds ^^^
+# time_interval = 3
+# time.sleep(0.5)
+# driver.find_elements_by_class_name("item-2IihgTnv")[time_interval].click()
+# time.sleep(0.5)
 
 
 def get_time() -> str:
     t = time.localtime()
     return time.strftime("%H:%M:%S", t)
+
+
+def get_symbol() -> str:
+    return driver.find_element_by_class_name("title-2ahQmZbQ").text
 
 
 def get_EMA(wait=False, length=2):
@@ -127,15 +130,18 @@ def find_possible_coins() -> list:
         try:
             # Not all elements ae coins in the watchlist, so im cheating with
             # this try/except :)
+            driver.execute_script("arguments[0].scrollIntoView();", e)
+            time.sleep(0.5)
             e.click()
             time.sleep(3)
             print(e.text.split("\n")[0], get_EMA())
-            if get_EMA() < 0:
+            if get_EMA() < -0.005:
                 # If this happens, then the EMA3 < EMA9 -> downtrend
                 print("Negative EMA: ", e.text.split("\n")[0])
                 negative_EMAS.append(e.text.split("\n")[0])
         except:
-            continue
+            pass
+            #continue
     print("Finished searching for negative EMA's")
     print("Negative EMA's: ", negative_EMAS)
     print("===============================")
@@ -162,8 +168,6 @@ def look_for_changing_EMAS() -> list:
                 e.click()
                 time.sleep(3)
                 if get_EMA() > 0.05:
-                    # 0.5 SHOULD BE A RATIO TO EACH COIN NOT A HARD CODED 0.5
-                    # ----------------------------------------------------
                     light_side.append(e.text.split("\n")[0])
         except:
             continue
@@ -177,7 +181,7 @@ def MACD_test_buy() -> bool:
     """
     Get time from the website, every interval, update MACD information and determine buy/sell
     """
-    macd_time_interval = index_to_seconds[time_interval]
+    macd_time_interval = index_to_seconds[time_interval] - 5 * 60
     macd_length = 3
     macd = get_MACD()
     # The macd the moment we find a positive ema
@@ -185,11 +189,12 @@ def MACD_test_buy() -> bool:
     print("Checking MACD:  ", macd)
 
     prev_macd = macd
-    for _ in range(macd_length):
+    for ind in range(macd_length):
         time.sleep(macd_time_interval)
         # Change the second amount to the time interval we are on so we get new macd
         next_macd = get_MACD()
-        if next_macd < 0:
+        if next_macd < 0 and ind:
+            # The "and ind" allows for the first and second MACD's to be negative but still
             print("NEGATIVE MACD")
             return False
         elif next_macd > prev_macd:
@@ -206,7 +211,7 @@ def MACD_test_buy() -> bool:
     # If we reach this point, there has been a successful increasing MACD and we purchase
 
 
-def MACD_hold_and_sell(stoploss=0.001, n=4):
+def MACD_hold_and_sell(stoploss=0.002, n=4):
     """
     From here, we bought the coin already, we now analyze the MACD for n consistent negative MACD's to indidicate a
     sell signal or a stop_loss, either sell the coin if the coin dips below the stop_loss or n negative MACD's
@@ -221,7 +226,7 @@ def MACD_hold_and_sell(stoploss=0.001, n=4):
     sell_point = (1 - stoploss) * get_price()
     print(f"Initial sell point: {sell_point}")
 
-    macd_time_interval = index_to_seconds[time_interval]  # 4 minutes
+    macd_time_interval = index_to_seconds[time_interval]  - 5 * 60
     # macd_time_interval = 60
     prev_macd = get_MACD()
     prev_price = get_price()

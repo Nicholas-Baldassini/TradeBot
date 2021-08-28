@@ -1,9 +1,7 @@
 import time
 import Email
+from random import randint
 # Must manually end program as driver.quit() function is missing
-
-stop_loss = 0.1
-# Sell if 10% of coin is lost
 
 
 def start():
@@ -14,7 +12,7 @@ def start():
         possible_coins = W.look_for_changing_EMAS()
 
         if possible_coins:
-            symbol = possible_coins[0]
+            symbol = possible_coins[randint(0, len(possible_coins) - 1)]
             assert W.click_on_watchlist(symbol)
             # Currently only the first coin to be spotted to hold will be held, any
             # other coins that are a good buy will be discarded
@@ -32,7 +30,7 @@ def start():
                 Time: {W.get_time()}
                 """
                 print(f"Price: {W.get_price()}", f"Time: {W.get_time()}", sep="\n")
-                Email.send_email([Email.boom, Email.jp], m)
+                Email.send_email([Email.boom], m)
                 W.MACD_hold_and_sell()
                 print("==================", f"SELL ALERT:  {symbol}", "==================", sep="\n")
                 m = f"""\t
@@ -40,7 +38,7 @@ def start():
                 \tprice: {W.get_price()}
                 Time: {W.get_time()}
                 """
-                Email.send_email([Email.boom, Email.jp], m)
+                Email.send_email([Email.boom], m)
         else:
             print("No possible purchases found, restarting...")
         time.sleep(10)
